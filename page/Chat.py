@@ -1,6 +1,7 @@
 import streamlit as st
 import koneksi as conn
 from datetime import datetime
+from fungsi import caesar, xor, rsa
 
 def get_user_id(username):
     """Get user ID from username"""
@@ -63,6 +64,14 @@ def load_messages(user_id1, user_id2):
             if isinstance(message_content, bytes):
                 message_content = message_content.decode('utf-8')
             
+            try:
+                decrypted_rsa = rsa.rsa_decrypt(message_content)
+                decrypted_xor = xor.xor_decrypt(decrypted_rsa)
+                decrypted_caesar = caesar.caesar_decrypt(decrypted_xor)
+                message_content = decrypted_caesar
+            except Exception as e:
+                message_content = f"[Decryption Error] {message_content}"
+                
             messages.append({
                 'id_text': row['id_text'],
                 'message': message_content,
@@ -400,8 +409,13 @@ def send_message(chat_username, sender_id, receiver_id, message_text, uploaded_f
     # Combine all message parts
     full_message = '\n'.join(message_parts)
     
+    encrypted_caesar = caesar.caesar_encrypt(full_message)
+    encrypted_xor = xor.xor_encrypt(encrypted_caesar)
+    encrypted_rsa = rsa.rsa_encrypt(encrypted_xor)
+    encrypted_message = ' '.join(map(str, encrypted_rsa))
+
     # Convert message to bytes for blob storage
-    message_bytes = full_message.encode('utf-8')
+    message_bytes = encrypted_message.encode('utf-8')
 
     if uploaded_file is not None:
         file_data = uploaded_file.read()
