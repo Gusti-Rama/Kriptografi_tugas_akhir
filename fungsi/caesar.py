@@ -1,5 +1,4 @@
-def caesar_encrypt(text):
-    shift = 7
+def caesar_encrypt(text, shift):
     result = ""
     for char in text:
         if char.isalpha():
@@ -9,8 +8,7 @@ def caesar_encrypt(text):
             result += char
     return result
 
-def caesar_decrypt(text):
-    shift = 7
+def caesar_decrypt(text, shift):
     result = ""
     for char in text:
         if char.isalpha():

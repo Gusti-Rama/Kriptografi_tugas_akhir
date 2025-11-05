@@ -1,5 +1,5 @@
 import streamlit as st
-from page import Login, Register, Chat
+from page import login, register, chat, demo,file,stego, home
 
 if 'sudah_login' not in st.session_state:
     st.session_state['sudah_login'] = False
@@ -20,23 +20,27 @@ if st.session_state['sudah_login']:
 
     page = st.sidebar.radio(
         "Navigasi", 
-        ["💬 Chat", "🖼️ Steganography", "🔒 File Encryption"], 
+        ["🏠 Dashboard","💬 Chat", "🧪 Demo Super-Enkripsi", "🔒 File Encryption", "🖼️ Steganography"],  
         key="nav_radio"
     )
+    
+    if page == "🏠 Dashboard":
+        home.home()
+    elif page == "💬 Chat":
+        chat.chat_page()
+    elif page == "🧪 Demo Super-Enkripsi":
+        demo.demo_page() 
+    elif page == "🔒 File Encryption":
+        file.file_page()
+    elif page == "🖼️ Steganography": 
+        stego.stego_page()
     
     st.sidebar.divider()
     
     if st.sidebar.button("🚪 Logout"):
+        st.session_state.clear()
         st.session_state['sudah_login'] = False
         st.rerun()
-    
-    page_map = {
-        "💬 Chat": "Chat",
-        "🖼️ Steganography": "Steganography",
-        "🔒 File Encryption": "File"
-    }
-    
-    Chat.menu(page_map[page]) #
 
 else:
     st.markdown("""
@@ -115,11 +119,11 @@ else:
     tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
     
     with tab1:
-        Login.login() 
+        login.login() 
         st.markdown("</div>", unsafe_allow_html=True)
     
     with tab2:
-        Register.register() 
+        register.register() 
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
