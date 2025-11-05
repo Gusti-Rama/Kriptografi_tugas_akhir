@@ -1,69 +1,132 @@
 from PIL import Image
 import numpy as np
 
-def genData(data):
-    return [format(ord(i), '08b') for i in data]
+def to_binary(data):
+    """Konversi data string ke biner."""
+    if isinstance(data, str):
+        return ''.join([format(ord(i), '08b') for i in data])
+    else:
+        raise TypeError("Tipe data tidak didukung.")
 
-def embed_msg(image_path, output_path, message):
-    img = Image.open(image_path)
-    img = img.convert('RGB')
-    pixels = np.array(img)
-    h, w, _ = pixels.shape
-    flat_pixels = pixels.reshape(-1, 3)
+def _get_adaptive_indices(image, threshold_percentile):
+    """
+    Fungsi helper untuk Adaptive LSB.
+    Menganalisis gambar dan mengembalikan daftar indeks piksel 
+    yang "kompleks" (aman) untuk disisipi data.
+    """
+    img_rgb = image.convert('RGB')
     
-    if not message:
-        raise ValueError("Message cannot be empty.")
+    # --- INI ADALAH PERBAIKAN PENTING YANG HILANG ---
+    # Paksa LSB (bit terakhir) menjadi 0 sebelum analisis.
+    # Ini memastikan peta indeks akan SAMA untuk gambar asli dan gambar-stego
+    # karena analisis gradien tidak akan terpengaruh oleh data LSB yang tersembunyi.
+    pixels = np.array(img_rgb) & 254
+    # -----------------------------------------------
     
-    data_bits = ''.join(genData(message + '###'))
-    bit_idx = 0
-    total_bits = len(data_bits)
-
-    # Compute gradient magnitude to find "complex" regions
-    gray = np.dot(pixels[..., :3], [0.299, 0.587, 0.114])
+    # Konversi ke grayscale untuk analisis kompleksitas
+    gray = np.dot(pixels[...,:3], [0.299, 0.587, 0.114])
+    
+    # Hitung gradien (ukuran kompleksitas)
     gx, gy = np.gradient(gray)
     gradient_mag = np.sqrt(gx**2 + gy**2)
     grad_flat = gradient_mag.flatten()
 
-    # Normalize and create mask for complex pixels
-    threshold = np.percentile(grad_flat, 60)  # top 40% = embed area
-    embed_indices = np.where(grad_flat >= threshold)[0]
+    # Tentukan threshold berdasarkan persentil
+    threshold_val = np.percentile(grad_flat, threshold_percentile)
+    embed_indices = np.where(grad_flat >= threshold_val)[0]
+    
+    np.random.seed(42)
+    np.random.shuffle(embed_indices)
+    
+    # Mengembalikan bentuk asli piksel
+    return embed_indices, np.array(img_rgb).shape
 
-    # Shuffle indices (optional for extra stealth)
-    # np.random.seed(42)
-    # np.random.shuffle(embed_indices)
-
-    for idx in embed_indices:
-        if bit_idx >= total_bits:
-            break
-        for channel in range(3):
-            if bit_idx >= total_bits:
-                break
-            val = flat_pixels[idx][channel]
-            bit = int(data_bits[bit_idx])
-            flat_pixels[idx][channel] = (val & ~1) | bit
-            bit_idx += 1
-
-    if bit_idx < total_bits:
-        raise ValueError("Message too long for this image!")
-
-    new_pixels = flat_pixels.reshape(h, w, 3)
-    new_img = Image.fromarray(new_pixels.astype(np.uint8))
-    new_img.save(output_path)
-    return output_path
-
-
-def extract_msg(image_path):
-    img = Image.open(image_path)
-    img = img.convert('RGB')
-    pixels = np.array(img)
+def embed_msg(image, secret_message, threshold_percentile):
+    """
+    Menyembunyikan pesan rahasia ke dalam gambar menggunakan Adaptive LSB.
+    """
+    img_rgb = image.convert('RGB')
+    pixels = np.array(img_rgb)
     flat_pixels = pixels.reshape(-1, 3)
-    bits = ''
-    for r, g, b in flat_pixels:
-        bits += str(r & 1)
-        bits += str(g & 1)
-        bits += str(b & 1)
 
-    chars = [bits[i:i+8] for i in range(0, len(bits), 8)]
-    decoded = ''.join([chr(int(c, 2)) for c in chars])
-    end = decoded.find('###')
-    return decoded[:end] if end != -1 else decoded
+    try:
+        embed_indices, shape = _get_adaptive_indices(image, threshold_percentile)
+    except Exception as e:
+        raise ValueError(f"Gagal menganalisis gambar: {e}")
+
+    secret_message += "###" # Delimiter
+    binary_secret_data = to_binary(secret_message)
+    data_len = len(binary_secret_data)
+    data_index = 0
+
+    # Cek kapasitas
+    total_capacity_bits = len(embed_indices) * 3
+    if data_len > total_capacity_bits:
+        raise ValueError(f"Error: Pesan terlalu panjang. (Kapasitas: {total_capacity_bits} bit, Pesan: {data_len} bit). Coba turunkan Threshold.")
+
+    # Sisipkan data
+    for idx in embed_indices:
+        if data_index >= data_len:
+            break
+        
+        pixel = flat_pixels[idx]
+        
+        for channel in range(3):
+            if data_index < data_len:
+                val = pixel[channel]
+                bit = int(binary_secret_data[data_index])
+                
+                pixel[channel] = (val & 254) | bit
+                data_index += 1
+            else:
+                break
+    
+    # Kembalikan gambar baru
+    new_pixels = flat_pixels.reshape(shape)
+    return Image.fromarray(new_pixels.astype(np.uint8))
+
+
+def extract_msg(image, threshold_percentile):
+    """
+    Mengekstrak pesan rahasia dari gambar menggunakan Adaptive LSB.
+    """
+    img_rgb = image.convert('RGB')
+    
+    # 1. Dapatkan "peta" piksel yang aman (harus sama persis dengan embed)
+    # Karena _get_adaptive_indices sekarang mengabaikan LSB,
+    # ia akan menghasilkan peta yang sama untuk gambar-stego ini
+    # seperti yang dilakukannya pada gambar asli.
+    try:
+        embed_indices, shape = _get_adaptive_indices(image, threshold_percentile)
+    except Exception as e:
+        raise ValueError(f"Gagal menganalisis gambar: {e}")
+
+    # Ambil piksel dari gambar yang di-upload (gambar-stego)
+    pixels = np.array(img_rgb)
+    flat_pixels = pixels.reshape(-1, 3)
+
+    # 2. Siapkan delimiter
+    binary_data = ""
+    delimiter = "###"
+    binary_delimiter = to_binary(delimiter)
+    
+    # 3. Ekstrak data
+    for idx in embed_indices:
+        pixel = flat_pixels[idx]
+        
+        for channel in range(3):
+            binary_data += str(pixel[channel] & 1)
+            
+            # 4. Cek delimiter
+            if binary_data.endswith(binary_delimiter):
+                binary_data = binary_data[:-len(binary_delimiter)]
+                
+                all_bytes = [binary_data[i:i+8] for i in range(0, len(binary_data), 8)]
+                decoded_data = ""
+                for byte in all_bytes:
+                    if len(byte) == 8:
+                        decoded_data += chr(int(byte, 2))
+                
+                return decoded_data
+
+    return ""

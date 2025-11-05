@@ -2,6 +2,7 @@ import streamlit as st
 import koneksi as conn
 from datetime import datetime
 from fungsi import caesar, xor, rsa
+import html
 
 def get_user_id(username):
     """Get user ID from username"""
@@ -16,8 +17,7 @@ def get_user_id(username):
 
 
 def load_user_chats(user_id):
-    """Load all chats for a user (users they've messaged or been messaged by)"""
-    # Get all unique users this user has conversations with
+    """Load all chats for a user"""
     query = conn.run_query(
         """
         SELECT DISTINCT u.id_user, u.username,
@@ -40,7 +40,7 @@ def load_user_chats(user_id):
 
 
 def load_messages(user_id1, user_id2):
-    """Load messages between two users"""
+    """Load messages between two users (HANYA CIPHERTEXT)"""
     query = conn.run_query(
         """
         SELECT t.id_text, t.message, t.sender_id, t.receiver_id, t.created_at,
@@ -57,24 +57,15 @@ def load_messages(user_id1, user_id2):
     )
     
     if query is not None and not query.empty:
-        # Convert message blob to string
         messages = []
         for _, row in query.iterrows():
             message_content = row['message']
             if isinstance(message_content, bytes):
                 message_content = message_content.decode('utf-8')
-            
-            try:
-                decrypted_rsa = rsa.rsa_decrypt(message_content)
-                decrypted_xor = xor.xor_decrypt(decrypted_rsa)
-                decrypted_caesar = caesar.caesar_decrypt(decrypted_xor)
-                message_content = decrypted_caesar
-            except Exception as e:
-                message_content = f"[Decryption Error] {message_content}"
                 
             messages.append({
                 'id_text': row['id_text'],
-                'message': message_content,
+                'message': message_content, 
                 'sender_id': row['sender_id'],
                 'receiver_id': row['receiver_id'],
                 'sender_username': row['sender_username'],
@@ -85,22 +76,9 @@ def load_messages(user_id1, user_id2):
     return []
 
 
-def menu(page):
-    """Main menu function that routes to different pages"""
-    if page == "Chat":
-        chat_interface()
-    elif page == "Steganography":
-        st.title("Steganography")
-        st.info("Steganography feature coming soon...")
-    elif page == "File":
-        st.title("File")
-        st.info("File feature coming soon...")
-
-
-def chat_interface():
+def chat_page():
     """Main chat interface with sidebar for chat list and main chat area"""
     
-    # Get current user ID
     current_username = st.session_state.get('username')
     if not current_username:
         st.error("Please log in first!")
@@ -114,20 +92,18 @@ def chat_interface():
     if 'active_chat' not in st.session_state:
         st.session_state['active_chat'] = None
     
-    # Load chats from database
+    if 'chat_caesar_shift' not in st.session_state:
+        st.session_state['chat_caesar_shift'] = 7
+    if 'chat_xor_key' not in st.session_state:
+        st.session_state['chat_xor_key'] = "69"
+
     chats = load_user_chats(current_user_id)
     
-    # Sidebar for chat list
     with st.sidebar:
         st.header("💬 Chats")
         
-        # Add new chat section
         st.subheader("Add New Chat")
-        new_chat_username = st.text_input(
-            "Enter username to chat with",
-            key="new_chat_input",
-            placeholder="Username..."
-        )
+        new_chat_username = st.text_input("Enter username to chat with", key="new_chat_input", placeholder="Username...")
         
         if st.button("➕ Add Chat", key="add_chat_button"):
             if new_chat_username:
@@ -139,7 +115,6 @@ def chat_interface():
                     st.session_state['active_chat'] = new_chat_username
                     st.rerun()
                 else:
-                    # Verify user exists in database
                     other_user_id = get_user_id(new_chat_username)
                     if other_user_id:
                         st.session_state['active_chat'] = new_chat_username
@@ -147,10 +122,7 @@ def chat_interface():
                         st.rerun()
                     else:
                         st.error("User not found!")
-        
-        st.divider()
-        
-        # Display existing chats
+
         st.subheader("Your Chats")
         
         if not chats:
@@ -160,48 +132,83 @@ def chat_interface():
                 chat_username = chat['username']
                 is_active = st.session_state['active_chat'] == chat_username
                 
-                # Style the chat box differently if active
                 if is_active:
                     st.markdown(
-                        f"""
-                        <div style="
-                            background-color: #1f77b4;
-                            color: white;
-                            padding: 10px;
-                            border-radius: 8px;
-                            margin: 5px 0;
-                            cursor: pointer;
-                        ">
+                        f"""<div style="background-color: #1f77b4; color: white; padding: 10px; border-radius: 8px; margin: 5px 0; cursor: pointer;">
                             <strong>{chat_username}</strong>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                        </div>""", unsafe_allow_html=True)
                 else:
-                    if st.button(
-                        f"💬 {chat_username}",
-                        key=f"chat_{chat_username}",
-                        use_container_width=True
-                    ):
+                    if st.button(f"💬 {chat_username}", key=f"chat_{chat_username}", use_container_width=True):
                         st.session_state['active_chat'] = chat_username
                         st.rerun()
     
-    # Main chat area
     if st.session_state['active_chat']:
         display_chat_area(st.session_state['active_chat'], current_user_id)
     else:
-        # Welcome screen when no chat is selected
-        st.title("💬 Welcome to Chat")
-        st.info("👈 Select a chat from the sidebar or add a new chat to get started!")
+        # --- PERUBAHAN DIMULAI DI SINI ---
+        st.title("💬 Selamat Datang di Vanish")
+        st.markdown("Pilih obrolan di sidebar kiri atau tambahkan obrolan baru untuk memulai.")
         
-        # Show some stats or instructions
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Total Chats", len(chats))
-        with col2:
-            st.metric("Active Chat", "None" if not st.session_state['active_chat'] else st.session_state['active_chat'])
-        with col3:
-            st.metric("Status", "Ready")
+        st.divider()
+
+        with st.container(border=True):
+            st.subheader("🔒 Bagaimana Obrolan Aman Ini Bekerja?")
+            st.markdown(
+                """
+                Vanish dirancang untuk privasi absolut. Semua pesan Anda diamankan menggunakan **Enkripsi Berlapis** sebelum pernah meninggalkan komputer Anda.
+                """
+            )
+            
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.markdown("#### 1. Ditulis (Plaintext)")
+                st.markdown("Anda menulis pesan seperti biasa di halaman 'Demo Enkripsi'.")
+            with c2:
+                st.markdown("#### 2. Dienkripsi (Super-Enkripsi)")
+                st.markdown("Pesan dienkripsi dengan **Caesar**, lalu **XOR**, lalu **RSA**.")
+            with c3:
+                st.markdown("#### 3. Dikirim (Ciphertext)")
+                st.markdown("Hanya teks acak (ciphertext) yang disimpan di database dan dikirim ke penerima.")
+            
+            st.markdown("---") 
+            st.markdown("#### 📖 Cara Mengirim dan Membaca Pesan")
+            st.markdown(
+                """
+                Karena keamanan ini, Anda **tidak bisa** langsung mengetik di kotak obrolan. Anda harus menggunakan halaman **'🧪 Demo Super-Enkripsi'**:
+
+                * **Untuk Mengirim Pesan:**
+                    1.  Buka '🧪 Demo Super-Enkripsi'.
+                    2.  Tulis pesan Anda di tab **'Proses Enkripsi'**.
+                    3.  Klik 'Enkripsi'.
+                    4.  Salin (Copy) **'Hasil Akhir'** (ciphertext).
+                    5.  Tempel (Paste) di kotak pesan obrolan dan kirim.
+
+                * **Untuk Membaca Pesan:**
+                    1.  Salin (Copy) pesan ciphertext yang Anda terima dari gelembung obrolan.
+                    2.  Buka '🧪 Demo Super-Enkripsi'.
+                    3.  Tempel (Paste) ke tab **'Proses Dekripsi'**.
+                    4.  Klik 'Dekripsi' untuk melihat pesan asli.
+                """
+            )
+            st.warning(
+                "**PENTING:** Anda dan penerima harus menyetujui dan menggunakan **Kunci (Shift & XOR)** yang sama persis agar pesan bisa dibaca!",
+                icon="🔑"
+            )
+
+        st.divider()
+        
+        # Row 2: Call to Action
+        st.header("Apa yang ingin Anda lakukan?")
+        c1, c2 = st.columns(2)
+        with c1:
+            with st.container(border=True):
+                st.subheader("Buka Obrolan")
+                st.info("Pilih nama pengguna dari daftar 'Your Chats' di sidebar kiri.")
+        with c2:
+            with st.container(border=True):
+                st.subheader("Mulai Obrolan Baru")
+                st.info("Gunakan kotak teks 'Add New Chat' di sidebar kiri untuk mencari pengguna baru.")
+        # --- PERUBAHAN SELESAI DI SINI ---
 
 
 def display_chat_area(chat_username, current_user_id):
@@ -209,20 +216,16 @@ def display_chat_area(chat_username, current_user_id):
     
     st.title(f"💬 Chat with {chat_username}")
     
-    # Get other user ID
     other_user_id = get_user_id(chat_username)
     if not other_user_id:
         st.error("User not found!")
         return
     
-    # Load messages from database
     messages = load_messages(current_user_id, other_user_id)
     
-    # Display chat messages
     st.subheader("Messages")
-    
-    # Container for messages
-    messages_container = st.container()
+    st.info("Pesan ditampilkan sebagai ciphertext. Gunakan 'Demo Enkripsi' untuk mendekripsi.")
+    messages_container = st.container(height=400) 
     
     with messages_container:
         if messages:
@@ -232,213 +235,116 @@ def display_chat_area(chat_username, current_user_id):
             st.info(f"No messages yet. Start chatting with {chat_username}!")
     
     st.divider()
+
+    st.subheader("Pengaturan Kunci Enkripsi (Untuk Mengirim)")
+    st.warning("Pastikan pengirim dan penerima menyetujui kunci yang SAMA persis.")
     
-    # Message input and file upload section
+    col_key1, col_key2 = st.columns(2)
+    with col_key1:
+        st.number_input(
+            "Caesar Shift (1-25)", 
+            min_value=1, 
+            max_value=25, 
+            key="chat_caesar_shift" 
+        )
+    with col_key2:
+        st.text_input(
+            "Kunci XOR (Teks)", 
+            key="chat_xor_key",
+            placeholder="Contoh: rahasia123"
+        )
+
     st.subheader("Send Message")
+    st.info("Tips: Gunakan 'Demo Enkripsi' untuk membuat ciphertext, lalu copy-paste ke sini.")
     
-    # Text input
     message_text = st.text_area(
-        "Type your message",
+        "Type your message (Plaintext atau Ciphertext)", 
         key=f"message_input_{chat_username}",
         height=100,
         placeholder="Type your message here..."
     )
     
-    # File upload buttons row
-    st.subheader("📎 Attach File")
-
-    # Step 1: Choose file type
-    file_type = st.selectbox(
-        "Select file type to upload",
-        options=["None", "Image", "Video", "Audio", "Document"],
-        key=f"file_type_select_{chat_username}"
-    )
-
-    uploaded_file = None  # default
-
-    # Step 2: Conditional uploader based on selected type
-    if file_type == "Image":
-        uploaded_file = st.file_uploader(
-            "📷 Upload Image",
-            type=['png', 'jpg', 'jpeg', 'gif', 'webp'],
-            key=f"file_upload_image_{chat_username}",
-            help="Upload an image file"
-        )
-
-    elif file_type == "Video":
-        uploaded_file = st.file_uploader(
-            "🎥 Upload Video",
-            type=['mp4', 'avi', 'mov', 'mkv'],
-            key=f"file_upload_video_{chat_username}",
-            help="Upload a video file"
-        )
-
-    elif file_type == "Audio":
-        uploaded_file = st.file_uploader(
-            "🎵 Upload Audio",
-            type=['mp3', 'wav', 'ogg', 'm4a'],
-            key=f"file_upload_audio_{chat_username}",
-            help="Upload an audio file"
-        )
-
-    elif file_type == "Document":
-        uploaded_file = st.file_uploader(
-            "📄 Upload Document",
-            type=['pdf', 'docx', 'doc', 'txt', 'xlsx', 'xls'],
-            key=f"file_upload_document_{chat_username}",
-            help="Upload a document file"
-        )
-
-    # Step 3: Keep track of file type for later use
-    st.session_state[f"uploaded_file_type_{chat_username}"] = file_type
-    st.session_state[f"uploaded_file_{chat_username}"] = uploaded_file
-
-
-    # Send button
-    def clear_input_field(key: str):
-        if key in st.session_state:
-            st.session_state[key] = ""
-
-
     col_send, col_clear = st.columns([4, 1])
 
     with col_send:
         st.button(
-        "📤 Send Message",
-        key=f"send_button_{chat_username}",
-        on_click=send_message,
-        args=(
-            chat_username,
-            current_user_id,
-            other_user_id,
-            message_text,
-            uploaded_file,   # ✅ single uploaded file
-            file_type        # ✅ dropdown selection
-        ),
-        use_container_width=True
-    )
-
+            "📤 Send Message (Encrypts if not ciphertext)",
+            key=f"send_button_{chat_username}",
+            on_click=send_message,
+            args=(chat_username, current_user_id, other_user_id, message_text),
+            use_container_width=True,
+            help="Teks akan dienkripsi menggunakan kunci di atas. Jika Anda menempelkan ciphertext, itu akan dienkripsi-ganda."
+        )
+    
     with col_clear:
         st.button(
-            "🗑️ Clear",
-            key=f"clear_button_{chat_username}",
-            on_click=clear_input_field,
-            args=(f"message_input_{chat_username}",),
-            use_container_width=True
+            "🗑️ Clear Text", 
+            key=f"clear_button_{chat_username}", 
+            on_click=clear_all_inputs, 
+            args=(chat_username,), 
+            use_container_width=True,
+            help="Menghapus teks yang akan dikirim"
         )
 
 
 def display_message(message, current_username):
-    """Display a single message in the chat"""
-    # message is a dict with: sender_username, receiver_username, message_content, created_at
+    """Display a single message in the chat (SEBAGAI CIPHERTEXT)"""
     sender_username = message.get('sender_username', '')
-    message_content = message.get('message', '')
+    message_content = message.get('message', '') 
     timestamp = message.get('created_at', '')
     
-    # Convert timestamp if it's a datetime object
     if isinstance(timestamp, datetime):
         timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
     elif timestamp:
         timestamp = str(timestamp)
     
     is_own = sender_username == current_username
-    
-    # Escape HTML in message content for security
-    import html
     safe_content = html.escape(str(message_content))
+    ciphertext_style = "word-wrap: break-word; font-family: 'Courier New', monospace; font-size: 0.9em; opacity: 0.9;"
     
     if is_own:
         st.markdown(
             f"""
-            <div style="
-                background-color: #007bff;
-                color: white;
-                padding: 10px;
-                border-radius: 10px;
-                margin: 5px 0;
-                margin-left: 20%;
-                text-align: right;
-            ">
+            <div style="background-color: #007bff; color: white; padding: 10px; border-radius: 10px; margin: 5px 0; margin-left: 20%; text-align: right;">
                 <strong>You</strong><br>
-                {safe_content}
+                <div style="{ciphertext_style}">
+                    {safe_content}
+                </div>
                 <br><small style="opacity: 0.8;">{timestamp}</small>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            """, unsafe_allow_html=True)
     else:
         st.markdown(
             f"""
-            <div style="
-                background-color: #e9ecef;
-                color: black;
-                padding: 10px;
-                border-radius: 10px;
-                margin: 5px 0;
-                margin-right: 20%;
-            ">
+            <div style="background-color: #e9ecef; color: black; padding: 10px; border-radius: 10px; margin: 5px 0; margin-right: 20%;">
                 <strong>{sender_username}</strong><br>
-                {safe_content}
+                <div style="{ciphertext_style} color: #333;">
+                    {safe_content}
+                </div>
                 <br><small style="opacity: 0.6;">{timestamp}</small>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            """, unsafe_allow_html=True)
 
-
-def send_message(chat_username, sender_id, receiver_id, message_text, uploaded_file, file_type):
-    """Handle sending a message to the database"""
+def send_message(chat_username, sender_id, receiver_id, message_text):
+    """Handle sending a message to the database (SELALU ENKRIPSI)"""
     
-    # Check if there's any content to send
-    has_content = False
-    message_parts = []
-    
-    if message_text and message_text.strip():
-        has_content = True
-        message_parts.append(message_text.strip())
-    
-    if uploaded_file is not None and file_type != "None":
-        has_content = True
-        file_info = f"{uploaded_file.name} ({uploaded_file.size} bytes)"
-        message_parts.append(f"📎 {file_type}: {file_info}")
-    
-    if not has_content:
-        st.warning("Please enter a message or upload a file!")
+    if not message_text or not message_text.strip():
+        st.warning("Please enter a message!")
         return
     
-    # Combine all message parts
-    full_message = '\n'.join(message_parts)
+    full_message = message_text.strip()
     
-    encrypted_caesar = caesar.caesar_encrypt(full_message)
-    encrypted_xor = xor.xor_encrypt(encrypted_caesar)
-    encrypted_rsa = rsa.rsa_encrypt(encrypted_xor)
+    caesar_shift = st.session_state.get('chat_caesar_shift', 7)
+    xor_key = st.session_state.get('chat_xor_key', "69")
+    if not xor_key: xor_key = "69" 
+
+    encrypted_caesar = caesar.caesar_encrypt(full_message, caesar_shift) 
+    encrypted_xor = xor.xor_encrypt(encrypted_caesar, xor_key) 
+    encrypted_rsa = rsa.rsa_encrypt(encrypted_xor) 
     encrypted_message = ' '.join(map(str, encrypted_rsa))
 
-    # Convert message to bytes for blob storage
     message_bytes = encrypted_message.encode('utf-8')
 
-    if uploaded_file is not None:
-        file_data = uploaded_file.read()
-
-        # Determine file column based on type
-        file_column = None
-        if file_type == "Image":
-            file_column = "image"
-        elif file_type == "Video":
-            file_column = "video"
-        elif file_type == "Audio":
-            file_column = "audio"
-        elif file_type == "Document":
-            file_column = "document"
-
-        if file_column:
-            conn.run_query(
-                f"INSERT INTO file ({file_column}) VALUES (%s);",
-                (file_data,),
-                fetch=False
-            )
-    
-    # Save to database
     success = conn.run_query(
         "INSERT INTO text (message, sender_id, receiver_id) VALUES (%s, %s, %s);",
         (message_bytes, sender_id, receiver_id),
@@ -446,9 +352,14 @@ def send_message(chat_username, sender_id, receiver_id, message_text, uploaded_f
     )
     
     if success:
-        # Clear inputs
         st.session_state[f"message_input_{chat_username}"] = ""
         st.success("Message sent!")
     else:
         st.error("Failed to send message. Please try again.")
 
+def clear_all_inputs(chat_username):
+    """Menghapus semua input di area kirim pesan"""
+    
+    text_key = f"message_input_{chat_username}"
+    if text_key in st.session_state:
+        st.session_state[text_key] = ""
