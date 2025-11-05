@@ -1,21 +1,32 @@
-import os
+import streamlit as st # <-- PERUBAHAN
 import mysql.connector
 import pandas as pd
-from dotenv import load_dotenv  # ambil data dr .env
+# Hapus 'os' dan 'load_dotenv', sudah tidak diperlukan
 
-load_dotenv()
+# Hapus load_dotenv()
 
 def get_connection():
+    """Create a new MySQL connection from Streamlit Secrets."""
+    # --- PERUBAHAN DIMULAI DI SINI ---
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
-        port=os.getenv("DB_PORT"),
+        host=st.secrets["DB_HOST"],
+        user=st.secrets["DB_USER"],
+        password=st.secrets["DB_PASSWORD"],
+        database=st.secrets["DB_NAME"],
+        port=st.secrets["DB_PORT"],
         autocommit=False,
     )
+    # --- PERUBAHAN SELESAI ---
+
+
+# Di file koneksi.py
 
 def run_query(query: str, params: tuple | None = None, fetch: bool = False):
+    """Execute a SQL query.
+
+    - When fetch=True, returns a pandas DataFrame (can be empty) or None on error.
+    - When fetch=False, commits changes and returns True on success, False on error.
+    """
     conn = None
     cursor = None
     try:
