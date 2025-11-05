@@ -1,5 +1,5 @@
 import streamlit as st
-from page import login, register, chat, demo,file,stego
+from page import login, register, chat, demo,file,stego, home
 
 if 'sudah_login' not in st.session_state:
     st.session_state['sudah_login'] = False
@@ -20,17 +20,13 @@ if st.session_state['sudah_login']:
 
     page = st.sidebar.radio(
         "Navigasi", 
-        ["💬 Chat", "🧪 Demo Super-Enkripsi", "🔒 File Encryption", "🖼️ Steganography"],  
+        ["🏠 Dashboard","💬 Chat", "🧪 Demo Super-Enkripsi", "🔒 File Encryption", "🖼️ Steganography"],  
         key="nav_radio"
     )
     
-    st.sidebar.divider()
-    
-    if st.sidebar.button("🚪 Logout"):
-        st.session_state['sudah_login'] = False
-        st.rerun()
-    
-    if page == "💬 Chat":
+    if page == "🏠 Dashboard":
+        home.home()
+    elif page == "💬 Chat":
         chat.chat_page()
     elif page == "🧪 Demo Super-Enkripsi":
         demo.demo_page() 
@@ -39,6 +35,12 @@ if st.session_state['sudah_login']:
     elif page == "🖼️ Steganography": 
         stego.stego_page()
     
+    st.sidebar.divider()
+    
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.clear()
+        st.session_state['sudah_login'] = False
+        st.rerun()
 
 else:
     st.markdown("""
