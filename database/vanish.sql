@@ -1,72 +1,138 @@
--- --------------------------------------------------------
--- Host:                         127.0.0.1
--- Server version:               8.4.3 - MySQL Community Server - GPL
--- Server OS:                    Win64
--- HeidiSQL Version:             12.8.0.6908
--- --------------------------------------------------------
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Nov 07, 2025 at 12:19 PM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET NAMES utf8 */;
-/*!50503 SET NAMES utf8mb4 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
 
+--
+-- Database: `vanish`
+--
 
--- Dumping database structure for vanish
-CREATE DATABASE IF NOT EXISTS `vanish` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
-USE `vanish`;
+-- --------------------------------------------------------
 
--- Dumping structure for table vanish.file
-CREATE TABLE IF NOT EXISTS `file` (
-  `id_file` int NOT NULL AUTO_INCREMENT,
+--
+-- Table structure for table `file`
+--
+
+CREATE TABLE `file` (
+  `id_file` int(11) NOT NULL,
   `file_data` mediumblob NOT NULL,
   `file_name` varchar(255) DEFAULT NULL,
-  `file_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  `uploaded_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `sender_id` int DEFAULT NULL,
-  `receiver_id` int DEFAULT NULL,
-  `category` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
-  PRIMARY KEY (`id_file`),
-  KEY `sender_id` (`sender_id`),
-  KEY `receiver_id` (`receiver_id`),
-  CONSTRAINT `file_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id_user`),
-  CONSTRAINT `file_ibfk_2` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `file_type` varchar(100) DEFAULT NULL,
+  `uploaded_at` timestamp NULL DEFAULT current_timestamp(),
+  `sender_id` int(11) DEFAULT NULL,
+  `receiver_id` int(11) DEFAULT NULL,
+  `category` varchar(50) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Data exporting was unselected.
+-- --------------------------------------------------------
 
--- Dumping structure for table vanish.text
-CREATE TABLE IF NOT EXISTS `text` (
-  `id_text` int NOT NULL AUTO_INCREMENT,
+--
+-- Table structure for table `text`
+--
+
+CREATE TABLE `text` (
+  `id_text` int(11) NOT NULL,
   `message` blob NOT NULL,
-  `sender_id` int DEFAULT NULL,
-  `receiver_id` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_text`),
-  KEY `sender_id` (`sender_id`),
-  KEY `receiver_id` (`receiver_id`),
-  CONSTRAINT `text_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id_user`),
-  CONSTRAINT `text_ibfk_2` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id_user`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `sender_id` int(11) DEFAULT NULL,
+  `receiver_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Data exporting was unselected.
+-- --------------------------------------------------------
 
--- Dumping structure for table vanish.user
-CREATE TABLE IF NOT EXISTS `user` (
-  `id_user` int NOT NULL AUTO_INCREMENT,
-  `username` blob,
+--
+-- Table structure for table `user`
+--
+
+CREATE TABLE `user` (
+  `id_user` int(11) NOT NULL,
+  `username` blob DEFAULT NULL,
   `password` binary(32) NOT NULL,
-  `salt` binary(16) NOT NULL,
-  PRIMARY KEY (`id_user`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `salt` binary(16) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Data exporting was unselected.
+--
+-- Indexes for dumped tables
+--
 
-/*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
-/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
-/*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
+--
+-- Indexes for table `file`
+--
+ALTER TABLE `file`
+  ADD PRIMARY KEY (`id_file`),
+  ADD KEY `sender_id` (`sender_id`),
+  ADD KEY `receiver_id` (`receiver_id`);
+
+--
+-- Indexes for table `text`
+--
+ALTER TABLE `text`
+  ADD PRIMARY KEY (`id_text`),
+  ADD KEY `sender_id` (`sender_id`),
+  ADD KEY `receiver_id` (`receiver_id`);
+
+--
+-- Indexes for table `user`
+--
+ALTER TABLE `user`
+  ADD PRIMARY KEY (`id_user`) USING BTREE,
+  ADD UNIQUE KEY `username` (`username`) USING HASH;
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `file`
+--
+ALTER TABLE `file`
+  MODIFY `id_file` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+
+--
+-- AUTO_INCREMENT for table `text`
+--
+ALTER TABLE `text`
+  MODIFY `id_text` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `user`
+--
+ALTER TABLE `user`
+  MODIFY `id_user` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `file`
+--
+ALTER TABLE `file`
+  ADD CONSTRAINT `file_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id_user`),
+  ADD CONSTRAINT `file_ibfk_2` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id_user`);
+
+--
+-- Constraints for table `text`
+--
+ALTER TABLE `text`
+  ADD CONSTRAINT `text_ibfk_1` FOREIGN KEY (`sender_id`) REFERENCES `user` (`id_user`),
+  ADD CONSTRAINT `text_ibfk_2` FOREIGN KEY (`receiver_id`) REFERENCES `user` (`id_user`);
+COMMIT;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

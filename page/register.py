@@ -2,6 +2,7 @@ import streamlit as st
 import koneksi as conn
 import hashlib
 import os
+import re
 from fungsi import db_encrypt
 
 def register():
@@ -13,10 +14,25 @@ def register():
     if st.button("Register", key="register_button"):
         if not username or not password or not re_password:
             st.error("Username dan password tidak boleh kosong.")
-            return
-        if password != re_password:
+        elif len(password) < 8:
+                st.error("Password minimal 8 karakter.")
+                return
+        elif password != re_password:
             st.error("Password tidak cocok.")
             return
+        else:
+            if not re.search(r"[A-Z]", password):
+                st.error("Password harus mengandung minimal satu huruf kapital.")
+                return
+            if not re.search(r"[a-z]", password):
+                st.error("Password harus mengandung minimal satu huruf kecil.")
+                return
+            if not re.search(r"[0-9]", password):
+                st.error("Password harus mengandung minimal satu angka.")
+                return
+            if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+                st.error("Password harus mengandung minimal satu karakter khusus.")
+                return
 
         # Ambil semua username, dekripsi, dan cek
         all_users_df = conn.run_query("SELECT username FROM user;", fetch=True)
