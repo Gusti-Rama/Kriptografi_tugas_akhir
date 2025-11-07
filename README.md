@@ -55,7 +55,7 @@ Ikuti langkah-langkah ini untuk menjalankan proyek Vanish di environment lokal A
 
 ```bash
 git clone https://github.com/Gusti-Rama/Kriptografi_tugas_akhir
-cd Gusti-Rama-Kriptografi_tugas_akhir
+cd Kriptografi_tugas_akhir
 ```
 
 ### 3. Siapkan Database
