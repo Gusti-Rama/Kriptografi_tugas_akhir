@@ -125,7 +125,7 @@ def stego_page():
                                 
                                 if success:
                                     st.success(f"Berhasil! Steganography-Image (teks) telah dikirim ke {receiver_username}.")
-                                    stego_container_name = f"Steganograpy_TXT_from_{current_username}_{cover_image_file.name}.png"
+                                    stego_container_name = f"Steganograpy_TXT_from_{current_username}_{cover_image_file.name}"
                                     st.download_button(
                                         label=f"Download Salinan '{stego_container_name}'",
                                         data=byte_im,
@@ -239,7 +239,7 @@ def stego_page():
                                 
                                 if success:
                                     st.success(f"Berhasil! Steganography-Image (gambar) telah dikirim ke {receiver_username_img}.")
-                                    stego_container_name = f"Steganography_IMG_from_{current_username}_{cover_image_file_img.name}.png"
+                                    stego_container_name = f"Steganography_IMG_from_{current_username}_{cover_image_file_img.name}"
                                     st.download_button(
                                         label=f"Download Salinan '{stego_container_name}'",
                                         data=byte_im,

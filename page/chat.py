@@ -218,14 +218,17 @@ def display_chat_area(chat_username, current_user_id, current_user_id_for_key):
         st.number_input(
             "Caesar Shift (1-25)", 
             min_value=1, 
-            max_value=25, 
-            key="chat_caesar_shift" # pake kunci dari session_state
+            max_value=25,
+            value=7, 
+            key="chat_caesar_shift", # pake kunci dari session_state
+            placeholder="Default 7"
         )
     with col_key2:
         st.text_input(
             "Kunci XOR (Teks)", 
             key="chat_xor_key", # pake kunci dari session_state
-            placeholder="Contoh: rahasia123"
+            value="69",
+            placeholder="Contoh: rahasia123, default 69"
         )
 
     st.subheader("Kirim Pesan")

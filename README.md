@@ -60,10 +60,12 @@ cd Gusti-Rama-Kriptografi_tugas_akhir
 
 ### 3. Siapkan Database
 
-1.  Buka *client* MySQL Anda (misalnya HeidiSQL, DBeaver, atau terminal).
-2.  Buat database baru dengan nama `vanish` (atau nama lain pilihan Anda).
+1.  Buka *client* MySQL Anda (phpMyAdmin).
+2.  Buat database baru dengan nama `vanish` (atau nama lain pilihan Anda). Gunakan collation **utf8mb4_general_ci**.
     ```sql
-    CREATE DATABASE vanish;
+    CREATE DATABASE vanish
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_general_ci;
     ```
 3.  Impor file SQL yang ada di folder database`database/vanish.sql`.
 

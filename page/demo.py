@@ -25,7 +25,8 @@ def demo_page():
         xor_key = st.text_input(
             "Kunci XOR (Teks)", 
             value="69",
-            key="demo_xor_key"
+            key="demo_xor_key",
+            placeholder="Contoh: rahasia123, default 69"
         )
     st.markdown("---")
 
